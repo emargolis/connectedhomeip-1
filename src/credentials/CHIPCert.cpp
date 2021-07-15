@@ -76,12 +76,15 @@ CHIP_ERROR ChipCertificateSet::Init(uint8_t maxCertsArraySize, uint16_t decodeBu
     mCerts = reinterpret_cast<ChipCertificateData *>(chip::Platform::MemoryAlloc(sizeof(ChipCertificateData) * maxCertsArraySize));
     VerifyOrExit(mCerts != nullptr, err = CHIP_ERROR_NO_MEMORY);
 
-    VerifyOrExit(decodeBufSize > 0, err = CHIP_ERROR_INVALID_ARGUMENT);
-    mDecodeBuf = reinterpret_cast<uint8_t *>(chip::Platform::MemoryAlloc(decodeBufSize));
-    VerifyOrExit(mDecodeBuf != nullptr, err = CHIP_ERROR_NO_MEMORY);
+    if (decodeBufSize > 0)
+    {
+        mDecodeBuf = reinterpret_cast<uint8_t *>(chip::Platform::MemoryAlloc(decodeBufSize));
+        VerifyOrExit(mDecodeBuf != nullptr, err = CHIP_ERROR_NO_MEMORY);
+
+        mDecodeBufSize = decodeBufSize;
+    }
 
     mMaxCerts            = maxCertsArraySize;
-    mDecodeBufSize       = decodeBufSize;
     mMemoryAllocInternal = true;
 
     Clear();
@@ -102,8 +105,6 @@ CHIP_ERROR ChipCertificateSet::Init(ChipCertificateData * certsArray, uint8_t ce
 
     VerifyOrExit(certsArray != nullptr, err = CHIP_ERROR_INVALID_ARGUMENT);
     VerifyOrExit(certsArraySize > 0, err = CHIP_ERROR_INVALID_ARGUMENT);
-    VerifyOrExit(decodeBuf != nullptr, err = CHIP_ERROR_INVALID_ARGUMENT);
-    VerifyOrExit(decodeBufSize > 0, err = CHIP_ERROR_INVALID_ARGUMENT);
 
     mCerts               = certsArray;
     mMaxCerts            = certsArraySize;
@@ -186,6 +187,12 @@ CHIP_ERROR ChipCertificateSet::LoadCert(TLVReader & reader, BitFlags<CertDecodeF
 
         // Enter the certificate structure...
         ReturnErrorOnFailure(reader.EnterContainer(containerType));
+
+        // If requested to generate the TBSHash, verify that the decode buffer was initialized.
+        if (decodeFlags.Has(CertDecodeFlags::kGenerateTBSHash))
+        {
+            VerifyOrReturnError(mDecodeBuf != nullptr && mDecodeBufSize > 0, CHIP_ERROR_INVALID_ARGUMENT);
+        }
 
         // Initialize an ASN1Writer and convert the TBS (to-be-signed) portion of the certificate to ASN.1 DER
         // encoding.  At the same time, parse various components within the certificate and set the corresponding
@@ -968,7 +975,7 @@ CHIP_ERROR ExtractPeerIdFromOpCert(const ByteSpan & opcert, PeerId * peerId)
 {
     ChipCertificateSet certSet;
 
-    ReturnErrorOnFailure(certSet.Init(1, kMaxCHIPCertDecodeBufLength));
+    ReturnErrorOnFailure(certSet.Init(1, 0));
 
     ReturnErrorOnFailure(certSet.LoadCert(opcert.data(), static_cast<uint32_t>(opcert.size()), BitFlags<CertDecodeFlags>()));
 

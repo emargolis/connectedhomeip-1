@@ -381,6 +381,8 @@ public:
      *
      * @param maxCertsArraySize  Maximum number of CHIP certificates to be loaded to the set.
      * @param decodeBufSize      Size of the buffer that should be allocated to perform CHIP certificate decoding.
+     *                           When this parameter is zero the buffer is not allocated, in which case
+     *                           the consequent LoadCert()/LoadCerts() calls MUST NOT pass kGenerateTBSHash flag.
      *
      * @return Returns a CHIP_ERROR on error, CHIP_NO_ERROR otherwise
      **/
@@ -394,6 +396,8 @@ public:
      * @param certsArray      A pointer to the array of the ChipCertificateData structures.
      * @param certsArraySize  Number of ChipCertificateData entries in the array.
      * @param decodeBuf       Buffer to use for temporary storage of intermediate processing results.
+     *                        When this parameter is nullptr the consequent LoadCert()/LoadCerts()
+     *                        calls MUST NOT pass kGenerateTBSHash flag.
      * @param decodeBufSize   Size of decoding buffer.
      *
      * @return Returns a CHIP_ERROR on error, CHIP_NO_ERROR otherwise
